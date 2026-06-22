@@ -447,6 +447,33 @@ def test_update_litellm_params_for_health_check():
     )
 
 
+def test_update_litellm_params_for_health_check_strips_extra_body():
+    """
+    Health probes should not inherit deployment extra_body payloads that change
+    real request semantics, such as OpenRouter server tools.
+    """
+    from litellm.proxy.health_check import _update_litellm_params_for_health_check
+
+    litellm_params = {
+        "model": "openrouter/anthropic/claude-haiku-4.5",
+        "api_key": "fake_key",
+        "extra_body": {
+            "tools": [
+                {
+                    "type": "openrouter:web_search",
+                    "parameters": {"engine": "auto", "max_results": 5},
+                },
+                {"type": "openrouter:datetime"},
+            ]
+        },
+    }
+
+    updated_params = _update_litellm_params_for_health_check({}, litellm_params)
+
+    assert "extra_body" not in updated_params
+    assert "extra_body" in litellm_params
+
+
 @pytest.mark.asyncio
 async def test_perform_health_check_filters_by_model_id():
     """
