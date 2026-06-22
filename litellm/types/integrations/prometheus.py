@@ -252,6 +252,8 @@ DEFINED_PROMETHEUS_METRICS = Literal[
     "litellm_llm_api_failed_requests_metric",
     "litellm_callback_logging_failures_metric",
     "litellm_in_flight_requests",
+    "litellm_total_users",
+    "litellm_teams_count",
     # Managed batch metrics
     "litellm_managed_batch_created_total",
     "litellm_managed_file_size_bytes",
@@ -723,6 +725,9 @@ class PrometheusMetricLabels:
     litellm_check_batch_cost_errors_total: List[str] = []  # label: error_type (custom)
 
     litellm_check_batch_cost_last_run_timestamp: List[str] = []
+
+    litellm_total_users: List[str] = []
+    litellm_teams_count: List[str] = []
 
     @staticmethod
     def get_labels(label_name: DEFINED_PROMETHEUS_METRICS) -> List[str]:

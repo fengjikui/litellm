@@ -10,8 +10,6 @@ Related issue: https://github.com/BerriAI/litellm/issues/18221
 
 from typing import get_args
 
-import pytest
-
 
 def test_remaining_requests_metric_name_in_defined_metrics():
     """
@@ -81,6 +79,30 @@ def test_prometheus_metric_labels_have_remaining_metrics():
     ), "litellm_remaining_tokens_metric should have api_base label"
 
 
+def test_user_team_count_metrics_in_defined_metrics():
+    """
+    Test that user/team count gauges can be enabled in prometheus_metrics_config.
+
+    These metric names intentionally match the emitted Prometheus gauge names.
+    """
+    from litellm.types.integrations.prometheus import DEFINED_PROMETHEUS_METRICS
+
+    defined_metrics = get_args(DEFINED_PROMETHEUS_METRICS)
+
+    assert "litellm_total_users" in defined_metrics
+    assert "litellm_teams_count" in defined_metrics
+
+
+def test_user_team_count_metrics_have_empty_labels():
+    """
+    Test that user/team count gauges have label definitions for validation.
+    """
+    from litellm.types.integrations.prometheus import PrometheusMetricLabels
+
+    assert PrometheusMetricLabels.get_labels("litellm_total_users") == []
+    assert PrometheusMetricLabels.get_labels("litellm_teams_count") == []
+
+
 def test_all_defined_metrics_have_consistent_naming():
     """
     Test that all metrics defined in DEFINED_PROMETHEUS_METRICS follow
@@ -103,5 +125,6 @@ if __name__ == "__main__":
     test_remaining_requests_metric_name_in_defined_metrics()
     test_remaining_tokens_metric_name_in_defined_metrics()
     test_prometheus_metric_labels_have_remaining_metrics()
+    test_user_team_count_metrics_in_defined_metrics()
+    test_user_team_count_metrics_have_empty_labels()
     test_all_defined_metrics_have_consistent_naming()
-    print("All prometheus metric name consistency tests passed!")
