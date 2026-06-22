@@ -31,6 +31,7 @@ from litellm.proxy.guardrails.guardrail_endpoints import (
     register_guardrail,
     reject_guardrail_submission,
     update_guardrail,
+    validate_blocked_words_file,
 )
 
 MOCK_ADMIN_USER = UserAPIKeyAuth(user_role=LitellmUserRoles.PROXY_ADMIN)
@@ -58,6 +59,32 @@ MOCK_DB_GUARDRAIL = {
     "created_at": datetime.now(),
     "updated_at": datetime.now(),
 }
+
+
+@pytest.mark.asyncio
+async def test_validate_blocked_words_file_returns_parsed_words():
+    result = await validate_blocked_words_file(
+        {
+            "file_content": "\n".join(
+                [
+                    "blocked_words:",
+                    "  - keyword: secret",
+                    "    action: BLOCK",
+                    "    description: from file",
+                ]
+            )
+        }
+    )
+
+    assert result["valid"] is True
+    assert result["blocked_words"] == [
+        {
+            "keyword": "secret",
+            "action": "BLOCK",
+            "description": "from file",
+        }
+    ]
+
 
 MOCK_CONFIG_GUARDRAIL = {
     "guardrail_id": "test-config-guardrail",

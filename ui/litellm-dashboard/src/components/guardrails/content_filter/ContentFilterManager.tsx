@@ -22,6 +22,12 @@ interface BlockedWord {
   description?: string;
 }
 
+interface UploadedBlockedWord {
+  keyword: string;
+  action: "BLOCK" | "MASK";
+  description?: string | null;
+}
+
 interface SelectedContentCategory {
   id: string;
   category: string;
@@ -264,8 +270,15 @@ const ContentFilterManager: React.FC<ContentFilterManagerProps> = ({
             onBlockedWordUpdate={(id, field, value) =>
               setBlockedWords(blockedWords.map((w) => (w.id === id ? { ...w, [field]: value } : w)))
             }
-            onFileUpload={(content: string) => {
-              console.log("File uploaded:", content);
+            onFileUpload={(uploadedWords: UploadedBlockedWord[]) => {
+              const uploadId = Date.now();
+              const parsedWords = uploadedWords.map((word, index) => ({
+                id: `word-upload-${uploadId}-${index}`,
+                keyword: word.keyword,
+                action: word.action,
+                description: word.description || undefined,
+              }));
+              setBlockedWords((currentWords) => [...currentWords, ...parsedWords]);
             }}
             accessToken={accessToken}
             contentCategories={guardrailSettings.content_filter_settings.content_categories || []}

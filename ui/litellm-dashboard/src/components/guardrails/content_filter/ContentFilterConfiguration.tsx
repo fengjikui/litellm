@@ -36,6 +36,12 @@ interface BlockedWord {
   description?: string;
 }
 
+interface UploadedBlockedWord {
+  keyword: string;
+  action: "BLOCK" | "MASK";
+  description?: string | null;
+}
+
 interface ContentCategory {
   name: string;
   display_name: string;
@@ -62,7 +68,7 @@ interface ContentFilterConfigurationProps {
   onBlockedWordAdd: (word: BlockedWord) => void;
   onBlockedWordRemove: (id: string) => void;
   onBlockedWordUpdate: (id: string, field: string, value: any) => void;
-  onFileUpload?: (content: string) => void;
+  onFileUpload?: (blockedWords: UploadedBlockedWord[]) => void;
   accessToken: string | null;
   showStep?: "patterns" | "keywords" | "categories" | "competitor_intent";
   contentCategories?: ContentCategory[];
@@ -185,7 +191,7 @@ const ContentFilterConfiguration: React.FC<ContentFilterConfigurationProps> = ({
         const result = await validateBlockedWordsFile(accessToken, content);
         if (result.valid) {
           if (onFileUpload) {
-            onFileUpload(content);
+            onFileUpload(result.blocked_words || []);
           }
           NotificationsManager.success(result.message || "File uploaded successfully");
         } else {

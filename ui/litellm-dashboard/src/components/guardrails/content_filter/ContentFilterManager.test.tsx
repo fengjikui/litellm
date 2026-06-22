@@ -26,6 +26,7 @@ vi.mock("./ContentFilterConfiguration", () => ({
     onPatternRemove,
     onBlockedWordAdd,
     onBlockedWordRemove,
+    onFileUpload,
     selectedPatterns,
     blockedWords,
   }: {
@@ -33,6 +34,13 @@ vi.mock("./ContentFilterConfiguration", () => ({
     onPatternRemove: (id: string) => void;
     onBlockedWordAdd: (w: object) => void;
     onBlockedWordRemove: (id: string) => void;
+    onFileUpload: (
+      blockedWords: {
+        keyword: string;
+        action: "BLOCK" | "MASK";
+        description?: string | null;
+      }[],
+    ) => void;
     selectedPatterns: { id: string }[];
     blockedWords: { id: string }[];
   }) => (
@@ -61,6 +69,20 @@ vi.mock("./ContentFilterConfiguration", () => ({
         }
       >
         Add keyword
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onFileUpload([
+            {
+              keyword: "yaml-secret",
+              action: "BLOCK",
+              description: "from file",
+            },
+          ])
+        }
+      >
+        Upload keywords
       </button>
       {selectedPatterns[0] && (
         <button type="button" onClick={() => onPatternRemove(selectedPatterns[0].id)}>
@@ -314,6 +336,38 @@ describe("ContentFilterManager", () => {
     const lastCall = mockOnDataChange.mock.calls[mockOnDataChange.mock.calls.length - 1];
     const blockedWords = lastCall[1];
     expect(blockedWords).toContainEqual(expect.objectContaining({ keyword: "secret", action: "MASK" }));
+  });
+
+  it("should add uploaded YAML keywords to blocked words", async () => {
+    const mockOnDataChange = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <ContentFilterManager
+        guardrailData={CONTENT_FILTER_GUARDRAIL_DATA}
+        guardrailSettings={GUARDRAIL_SETTINGS}
+        isEditing={true}
+        accessToken="test-token"
+        onDataChange={mockOnDataChange}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("content-filter-config")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: /upload keywords/i }));
+
+    await waitFor(() => {
+      const lastCall = mockOnDataChange.mock.calls[mockOnDataChange.mock.calls.length - 1];
+      expect(lastCall[1]).toContainEqual(
+        expect.objectContaining({
+          keyword: "yaml-secret",
+          action: "BLOCK",
+          description: "from file",
+        }),
+      );
+    });
   });
 
   it("should not call onUnsavedChanges when isEditing is false", async () => {

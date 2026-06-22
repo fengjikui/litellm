@@ -1578,6 +1578,7 @@ async def validate_blocked_words_file(request: Dict[str, str]):
         return {
             "valid": True,
             "message": f"Valid YAML file with {len(blocked_words_list)} blocked word(s)",
+            "blocked_words": blocked_words_list,
         }
     except yaml.YAMLError as e:
         return {"valid": False, "error": f"Invalid YAML syntax: {str(e)}"}
