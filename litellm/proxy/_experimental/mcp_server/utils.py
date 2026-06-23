@@ -22,6 +22,8 @@ import importlib
 import os
 from urllib.parse import quote
 
+import litellm
+
 # Constants
 #
 # NOTE: The environment-backed values below are read once, when this module is
@@ -508,6 +510,28 @@ def interpolate_headers(
 ) -> Dict[str, str]:
     """Return a copy of ``headers`` with every value passed through ``interpolate_env_vars``."""
     return {k: interpolate_env_vars(v, variables) for k, v in headers.items()}
+
+
+def resolve_static_header_env_vars(
+    headers: Optional[Mapping[str, str]],
+) -> Optional[Dict[str, str]]:
+    """Resolve ``os.environ/VAR`` values in MCP static headers.
+
+    YAML config gets this treatment from ``ProxyConfig._check_for_os_environ_vars``.
+    MCP servers loaded from the DB or tested directly from the UI need the same
+    handling after their ``static_headers`` are materialized.
+    """
+    if not headers:
+        return None
+
+    resolved: Dict[str, str] = {}
+    for key, value in headers.items():
+        if isinstance(value, str) and value.startswith("os.environ/"):
+            secret_value = litellm.get_secret(value, default_value=value)
+            resolved[key] = str(secret_value)
+        else:
+            resolved[key] = str(value)
+    return resolved
 
 
 def build_env_var_setup_url(server_id: str) -> str:

@@ -163,6 +163,56 @@ class TestExecuteWithMcpClient:
         }
 
     @pytest.mark.asyncio
+    async def test_resolves_static_header_env_vars(self, monkeypatch):
+        """UI test calls resolve os.environ/ static header values before forwarding."""
+        captured: dict = {}
+        monkeypatch.setenv("MCP_STATIC_HEADER_SECRET", "resolved-secret")
+
+        def fake_build_stdio_env(server, raw_headers):
+            return None
+
+        async def fake_create_client(*args, **kwargs):
+            captured["extra_headers"] = kwargs.get("extra_headers")
+            return object()
+
+        monkeypatch.setattr(
+            rest_endpoints.global_mcp_server_manager,
+            "_build_stdio_env",
+            fake_build_stdio_env,
+            raising=False,
+        )
+        monkeypatch.setattr(
+            rest_endpoints.global_mcp_server_manager,
+            "_create_mcp_client",
+            fake_create_client,
+            raising=False,
+        )
+
+        async def ok_operation(client):
+            return {"status": "ok"}
+
+        payload = NewMCPServerRequest(
+            server_name="example",
+            url="https://example.com",
+            auth_type=MCPAuth.none,
+            static_headers={
+                "Authorization": "os.environ/MCP_STATIC_HEADER_SECRET",
+                "X-Static": "literal",
+            },
+        )
+
+        result = await rest_endpoints._execute_with_mcp_client(
+            payload,
+            ok_operation,
+        )
+
+        assert result["status"] == "ok"
+        assert captured["extra_headers"] == {
+            "Authorization": "resolved-secret",
+            "X-Static": "literal",
+        }
+
+    @pytest.mark.asyncio
     async def test_m2m_credentials_forwarded_to_server_model(self, monkeypatch):
         """M2M OAuth credentials (client_id, client_secret) from the nested
         ``credentials`` dict must be forwarded to the MCPServer model so that

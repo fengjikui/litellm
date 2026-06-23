@@ -935,6 +935,67 @@ class TestSigV4BuildFromTable:
         assert server.aws_region_name is None
         assert server.aws_service_name is None
 
+    @pytest.mark.asyncio
+    async def test_build_mcp_server_from_table_resolves_static_header_env_vars(
+        self, monkeypatch
+    ):
+        """MCP servers loaded from DB resolve os.environ/ static header values."""
+        from litellm.proxy._experimental.mcp_server.mcp_server_manager import (
+            MCPServerManager,
+        )
+
+        monkeypatch.setenv("MCP_STATIC_HEADER_SECRET", "resolved-secret")
+
+        table_record = MagicMock()
+        table_record.server_id = "test-header-server"
+        table_record.server_name = "header_server"
+        table_record.alias = None
+        table_record.description = None
+        table_record.url = "https://example.com/mcp"
+        table_record.spec_path = None
+        table_record.transport = "http"
+        table_record.auth_type = "none"
+        table_record.mcp_info = {"server_name": "header_server"}
+        table_record.credentials = None
+        table_record.extra_headers = None
+        table_record.static_headers = json.dumps(
+            {
+                "Authorization": "os.environ/MCP_STATIC_HEADER_SECRET",
+                "X-Static": "literal",
+            }
+        )
+        table_record.command = None
+        table_record.args = []
+        table_record.env = None
+        table_record.env_vars = None
+        table_record.mcp_access_groups = []
+        table_record.allowed_tools = []
+        table_record.disallowed_tools = None
+        table_record.allow_all_keys = False
+        table_record.available_on_public_internet = True
+        table_record.authorization_url = None
+        table_record.token_url = None
+        table_record.registration_url = None
+        table_record.created_at = None
+        table_record.updated_at = None
+        table_record.client_id = None
+        table_record.client_secret = None
+        table_record.tool_name_to_display_name = None
+        table_record.tool_name_to_description = None
+        table_record.byok_api_key_help_url = None
+        table_record.oauth2_flow = None
+        table_record.instructions = None
+        table_record.source_url = None
+
+        manager = MCPServerManager()
+
+        server = await manager.build_mcp_server_from_table(table_record)
+
+        assert server.static_headers == {
+            "Authorization": "resolved-secret",
+            "X-Static": "literal",
+        }
+
 
 class TestDecryptCredentials:
     """Test decrypt_credentials helper."""

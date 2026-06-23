@@ -71,6 +71,7 @@ from litellm.proxy._experimental.mcp_server.utils import (
     merge_mcp_headers,
     normalize_server_name,
     parse_admin_env_vars,
+    resolve_static_header_env_vars,
     split_server_prefix_from_name,
     validate_mcp_server_name,
 )
@@ -1062,6 +1063,7 @@ class MCPServerManager:
         static_headers_dict = _deserialize_json_dict(
             getattr(mcp_server, "static_headers", None)
         )
+        static_headers_dict = resolve_static_header_env_vars(static_headers_dict)
         env_vars_list = self._resolve_env_vars_list(
             mcp_server,
             env_vars_are_encrypted=(
