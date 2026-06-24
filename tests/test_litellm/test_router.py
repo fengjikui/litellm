@@ -1078,6 +1078,28 @@ def test_cached_get_model_group_info():
     assert result5 is result6
 
 
+def test_model_group_alias_dict_without_hidden_defaults_visible():
+    router = litellm.Router(
+        model_list=[
+            {
+                "model_name": "gpt-4",
+                "litellm_params": {"model": "openai/gpt-4", "api_key": "fake"},
+                "model_info": {"tpm": 1000, "rpm": 100},
+            }
+        ],
+        model_group_alias={"my-alias": {"model": "gpt-4"}},
+    )
+
+    deployments = router.get_model_list(model_name="my-alias")
+    assert len(deployments) == 1
+    assert deployments[0]["model_name"] == "my-alias"
+
+    model_group_info = router.get_model_group_info("my-alias")
+    assert model_group_info is not None
+    assert model_group_info.model_group == "my-alias"
+    assert model_group_info.tpm == 1000
+
+
 def test_model_group_info_cost_from_db_model_info():
     """
     When get_deployment_model_info fails (model_info is None fallback),
