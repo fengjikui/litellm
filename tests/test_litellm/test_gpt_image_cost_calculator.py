@@ -200,6 +200,41 @@ class TestGPTImageCostCalculator:
         expected_cost = 0.0005 + 0.004 + 0.01 + 0.12
         assert abs(cost - expected_cost) < 1e-6, f"Expected {expected_cost}, got {cost}"
 
+    def test_gpt_image_2_image_usage_without_output_details_costs_output_as_image_tokens(
+        self,
+    ):
+        """OpenAI Images usage has output_tokens but no output_tokens_details."""
+        from litellm.llms.openai.image_generation.cost_calculator import cost_calculator
+
+        usage = ImageUsage(
+            input_tokens=600,
+            output_tokens=4000,
+            total_tokens=4600,
+            input_tokens_details=ImageUsageInputTokensDetails(
+                text_tokens=100,
+                image_tokens=500,
+            ),
+        )
+
+        image_response = ImageResponse(
+            created=1234567890,
+            data=[ImageObject(b64_json="test")],
+        )
+        image_response.usage = usage
+
+        cost = cost_calculator(
+            model="gpt-image-2",
+            image_response=image_response,
+            custom_llm_provider="openai",
+        )
+
+        # GPT Image 2 pricing:
+        # Text input: 100 * $5/1M = 0.0005
+        # Image input: 500 * $8/1M = 0.004
+        # Image output: 4000 * $30/1M = 0.12
+        expected_cost = 0.0005 + 0.004 + 0.12
+        assert abs(cost - expected_cost) < 1e-6, f"Expected {expected_cost}, got {cost}"
+
 
 class TestGPTImageCostRouting:
     """Test that gpt-image models are properly routed to the token-based calculator"""
@@ -343,8 +378,7 @@ class TestGPTImage15OutputImageTokens:
         expected_cost = 169 * 5e-06 + 439 * 1e-05 + 4160 * 3.2e-05
 
         assert abs(cost - expected_cost) < 1e-6, (
-            f"Expected {expected_cost}, got {cost}. "
-            f"Image tokens may not be included in cost calculation."
+            f"Expected {expected_cost}, got {cost}. Image tokens may not be included in cost calculation."
         )
 
 
