@@ -16,6 +16,7 @@ from litellm.llms.custom_httpx.http_handler import (
     AsyncHTTPHandler,
     HTTPHandler,
     _get_httpx_client,
+    get_ssl_configuration,
 )
 from litellm.llms.custom_httpx.aiohttp_transport import LiteLLMAiohttpTransport
 from litellm.types.llms.openai import FileTypes
@@ -38,6 +39,7 @@ class BaseLLMAIOHTTPHandler:
         client_session: Optional[aiohttp.ClientSession] = None,
         transport: Optional[LiteLLMAiohttpTransport] = None,
         connector: Optional[aiohttp.BaseConnector] = None,
+        ssl_verify: Optional[Any] = None,
     ):
         self.client_session = client_session
         self._owns_session = (
@@ -53,6 +55,7 @@ class BaseLLMAIOHTTPHandler:
         self._owns_connector = (
             connector is None
         )  # Track if we own the connector for cleanup
+        self.ssl_verify = ssl_verify
 
     def _get_or_create_transport(self) -> Optional[LiteLLMAiohttpTransport]:
         """Get existing transport or create a new one if needed."""
@@ -193,12 +196,17 @@ class BaseLLMAIOHTTPHandler:
 
         for i in range(max(max_retry_on_unprocessable_entity_error, 1)):
             try:
-                response = await async_client_session.post(
-                    url=api_base,
-                    headers=headers,
-                    json=data,
-                    data=form_data,
-                )
+                request_kwargs: dict[str, Any] = {
+                    "url": api_base,
+                    "headers": headers,
+                    "json": data,
+                    "data": form_data,
+                }
+                ssl_verify = litellm_params.get("ssl_verify", self.ssl_verify)
+                if ssl_verify is not None:
+                    request_kwargs["ssl"] = get_ssl_configuration(ssl_verify)
+
+                response = await async_client_session.post(**request_kwargs)
                 if not response.ok:
                     response.raise_for_status()
             except aiohttp.ClientResponseError as e:

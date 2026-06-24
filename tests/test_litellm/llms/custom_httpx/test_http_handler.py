@@ -1,7 +1,5 @@
 import asyncio
-import io
 import os
-import pathlib
 import ssl
 import sys
 import threading
@@ -72,6 +70,47 @@ async def test_async_post_streaming_status_error_should_not_wait_forever_for_bod
 
         assert exc_info.value.status_code == 400
         assert exc_info.value.response.status_code == 400
+    finally:
+        await litellm_handler.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("method_name", ["post", "put", "patch", "delete"])
+async def test_async_retry_preserves_ssl_verify(method_name, monkeypatch):
+    async def failing_transport(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("connection reset", request=request)
+
+    async def retry_transport(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, request=request, json={"ok": True})
+
+    litellm_handler = AsyncHTTPHandler(ssl_verify=False)
+    await litellm_handler.client.aclose()
+    litellm_handler.client = httpx.AsyncClient(
+        transport=httpx.MockTransport(failing_transport)
+    )
+    create_client_calls = []
+
+    def create_client(timeout, event_hooks, ssl_verify=None, shared_session=None):
+        create_client_calls.append(
+            {
+                "timeout": timeout,
+                "event_hooks": event_hooks,
+                "ssl_verify": ssl_verify,
+                "shared_session": shared_session,
+            }
+        )
+        return httpx.AsyncClient(transport=httpx.MockTransport(retry_transport))
+
+    monkeypatch.setattr(litellm_handler, "create_client", create_client)
+
+    try:
+        response = await getattr(litellm_handler, method_name)(
+            "https://example.test/retry"
+        )
+
+        assert response.status_code == 200
+        assert create_client_calls
+        assert create_client_calls[0]["ssl_verify"] is False
     finally:
         await litellm_handler.close()
 
