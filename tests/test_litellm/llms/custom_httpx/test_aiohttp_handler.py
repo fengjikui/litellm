@@ -211,6 +211,76 @@ class TestBaseLLMAIOHTTPHandler:
 
         assert session1 is session2 is session3 is instance_session
 
+    @pytest.mark.asyncio
+    async def test_make_common_async_call_passes_ssl_verify_to_aiohttp_post(self):
+        """Test request-level ssl_verify reaches aiohttp direct session calls."""
+        post_calls = []
+
+        class MockResponse:
+            ok = True
+
+            def raise_for_status(self):
+                raise AssertionError("raise_for_status should not be called")
+
+        class MockSession:
+            closed = True
+
+            async def post(self, **kwargs):
+                post_calls.append(kwargs)
+                return MockResponse()
+
+        provider_config = Mock()
+        provider_config.max_retry_on_unprocessable_entity_error = 1
+        handler = BaseLLMAIOHTTPHandler(client_session=MockSession())
+
+        await handler._make_common_async_call(
+            async_client_session=None,
+            provider_config=provider_config,
+            api_base="http://example.test/embeddings",
+            headers={},
+            data={"input": "hello"},
+            timeout=1,
+            litellm_params={"ssl_verify": False},
+        )
+
+        assert post_calls
+        assert post_calls[0]["ssl"] is False
+
+    @pytest.mark.asyncio
+    async def test_make_common_async_call_omits_ssl_when_not_configured(self):
+        """Keep default aiohttp session behavior when ssl_verify is not configured."""
+        post_calls = []
+
+        class MockResponse:
+            ok = True
+
+            def raise_for_status(self):
+                raise AssertionError("raise_for_status should not be called")
+
+        class MockSession:
+            closed = True
+
+            async def post(self, **kwargs):
+                post_calls.append(kwargs)
+                return MockResponse()
+
+        provider_config = Mock()
+        provider_config.max_retry_on_unprocessable_entity_error = 1
+        handler = BaseLLMAIOHTTPHandler(client_session=MockSession())
+
+        await handler._make_common_async_call(
+            async_client_session=None,
+            provider_config=provider_config,
+            api_base="http://example.test/embeddings",
+            headers={},
+            data={"input": "hello"},
+            timeout=1,
+            litellm_params={},
+        )
+
+        assert post_calls
+        assert "ssl" not in post_calls[0]
+
     # ===============================
     # TRANSPORT INJECTION TESTS
     # ===============================

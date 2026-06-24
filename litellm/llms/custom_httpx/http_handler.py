@@ -527,6 +527,8 @@ class AsyncHTTPHandler:
     ):
         self.timeout = timeout
         self.event_hooks = event_hooks
+        self.ssl_verify = ssl_verify
+        self.shared_session = shared_session
         self.client = self.create_client(
             timeout=timeout,
             event_hooks=event_hooks,
@@ -644,7 +646,10 @@ class AsyncHTTPHandler:
         except (httpx.RemoteProtocolError, httpx.ConnectError):
             # Retry the request with a new session if there is a connection error
             new_client = self.create_client(
-                timeout=timeout, event_hooks=self.event_hooks
+                timeout=timeout,
+                event_hooks=self.event_hooks,
+                ssl_verify=self.ssl_verify,
+                shared_session=self.shared_session,
             )
             try:
                 return await self.single_connection_post_request(
@@ -707,7 +712,10 @@ class AsyncHTTPHandler:
         except (httpx.RemoteProtocolError, httpx.ConnectError):
             # Retry the request with a new session if there is a connection error
             new_client = self.create_client(
-                timeout=timeout, event_hooks=self.event_hooks
+                timeout=timeout,
+                event_hooks=self.event_hooks,
+                ssl_verify=self.ssl_verify,
+                shared_session=self.shared_session,
             )
             try:
                 return await self.single_connection_post_request(
@@ -768,7 +776,10 @@ class AsyncHTTPHandler:
         except (httpx.RemoteProtocolError, httpx.ConnectError):
             # Retry the request with a new session if there is a connection error
             new_client = self.create_client(
-                timeout=timeout, event_hooks=self.event_hooks
+                timeout=timeout,
+                event_hooks=self.event_hooks,
+                ssl_verify=self.ssl_verify,
+                shared_session=self.shared_session,
             )
             try:
                 return await self.single_connection_post_request(
@@ -829,7 +840,10 @@ class AsyncHTTPHandler:
         except (httpx.RemoteProtocolError, httpx.ConnectError):
             # Retry the request with a new session if there is a connection error
             new_client = self.create_client(
-                timeout=timeout, event_hooks=self.event_hooks
+                timeout=timeout,
+                event_hooks=self.event_hooks,
+                ssl_verify=self.ssl_verify,
+                shared_session=self.shared_session,
             )
             try:
                 return await self.single_connection_post_request(
